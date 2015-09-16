@@ -25,6 +25,7 @@ import time
 import uuid
 
 from docker import errors
+from docker import utils as docker_utils
 from oslo_config import cfg
 from oslo_log import log
 from oslo_serialization import jsonutils
@@ -91,6 +92,9 @@ docker_opts = [
                help='Shared directory where glance images located. If '
                     'specified, docker will try to load the image from '
                     'the shared directory by image ID.'),
+    cfg.BoolOpt('privileged',
+                default=False,
+                help='Set true can own all root privileges in a container.'),
 ]
 
 CONF.register_opts(docker_opts, 'docker')
@@ -235,6 +239,8 @@ class DockerDriver(driver.ComputeDriver):
             'ln', '-sf', '/proc/{0}/ns/net'.format(nspid),
             '/var/run/netns/{0}'.format(container_id),
             run_as_root=True)
+        utils.execute('ip', 'netns', 'exec', container_id, 'ip', 'link',
+                      'set', 'lo', 'up', run_as_root=True)
 
         for vif in network_info:
             self.vif_driver.attach(instance, vif, container_id)
@@ -433,7 +439,8 @@ class DockerDriver(driver.ComputeDriver):
     def _start_container(self, container_id, instance, network_info=None):
         binds = self._get_key_binds(container_id, instance)
         dns = self._extract_dns_entries(network_info)
-        self.docker.start(container_id, binds=binds, dns=dns)
+        self.docker.start(container_id, binds=binds, dns=dns,
+                          privileged=CONF.docker.privileged)
 
         if not network_info:
             return
@@ -728,8 +735,20 @@ class DockerDriver(driver.ComputeDriver):
 
     def _create_container(self, instance, image_name, args):
         name = "nova-" + instance['uuid']
-        args.update({'name': self._encode_utf8(name)})
-        return self.docker.create_container(image_name, **args)
+        hostname = args.pop('hostname', None)
+        cpu_shares = args.pop('cpu_shares', None)
+        network_disabled = args.pop('network_disabled', False)
+        environment = args.pop('environment', None)
+        command = args.pop('command', None)
+        host_config = docker_utils.create_host_config(**args)
+        return self.docker.create_container(image_name,
+                                            name=self._encode_utf8(name),
+                                            hostname=hostname,
+                                            cpu_shares=cpu_shares,
+                                            network_disabled=network_disabled,
+                                            environment=environment,
+                                            command=command,
+                                            host_config=host_config)
 
     def get_host_uptime(self):
         return hostutils.sys_uptime()

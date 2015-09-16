@@ -83,7 +83,6 @@ class MockClient(object):
         data = {
             'Hostname': args['hostname'],
             'User': '',
-            'Memory': args['mem_limit'],
             'MemorySwap': 0,
             'AttachStdin': False,
             'AttachStdout': False,
@@ -112,7 +111,7 @@ class MockClient(object):
         }
         return container_id
 
-    def start(self, container_id, binds=None, dns=None):
+    def start(self, container_id, binds=None, dns=None, privileged=False):
         if container_id not in self._containers:
             return False
         self._containers[container_id]['running'] = True
