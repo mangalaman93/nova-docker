@@ -740,6 +740,8 @@ class DockerDriver(driver.ComputeDriver):
         network_disabled = args.pop('network_disabled', False)
         environment = args.pop('environment', None)
         command = args.pop('command', None)
+        args['cpu_period'] = 100000 # 100ms
+        args['cpu_quota'] = int(self._get_cpu_shares(instance)/1024.0*100000)
         if environment:
             for key in environment.keys():
                 if key == 'OPT_CAP_ADD':
