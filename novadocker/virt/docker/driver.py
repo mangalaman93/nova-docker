@@ -740,6 +740,10 @@ class DockerDriver(driver.ComputeDriver):
         network_disabled = args.pop('network_disabled', False)
         environment = args.pop('environment', None)
         command = args.pop('command', None)
+        if environment:
+            for key in environment.keys():
+                if key == 'OPT_CAP_ADD':
+                    args['cap_add'] = [environment.pop(key)]
         host_config = docker_utils.create_host_config(**args)
         return self.docker.create_container(image_name,
                                             name=self._encode_utf8(name),
