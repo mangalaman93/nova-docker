@@ -405,8 +405,6 @@ class DockerGenericVIFDriver(object):
     def attach(self, instance, vif, container_id):
         vif_type = vif['type']
         if_remote_name = 'ns%s' % vif['id'][:11]
-        gateway = network.find_gateway(instance, vif['network'])
-        ip = network.find_fixed_ip(instance, vif['network'])
 
         LOG.debug('attach vif_type=%(vif_type)s instance=%(instance)s '
                   'vif=%(vif)s',
@@ -419,10 +417,19 @@ class DockerGenericVIFDriver(object):
             utils.execute('ip', 'netns', 'exec', container_id, 'ip', 'link',
                           'set', if_remote_name, 'address', vif['address'],
                           run_as_root=True)
-            utils.execute('ip', 'netns', 'exec', container_id, 'ip', 'addr',
-                          'add', ip, 'dev', if_remote_name, run_as_root=True)
+
             utils.execute('ip', 'netns', 'exec', container_id, 'ip', 'link',
                           'set', if_remote_name, 'up', run_as_root=True)
+
+            for subnet in vif['network']['subnets']:
+                gateway = network.find_gateway(instance, subnet)
+                ip = network.find_fixed_ip(instance, subnet)
+                utils.execute('ip', 'netns', 'exec', container_id, 'ip', 'addr',
+                              'add', ip, 'dev', if_remote_name, run_as_root=True)
+                if gateway is not None:
+                    utils.execute('ip', 'netns', 'exec', container_id,
+                                  'ip', 'route', 'replace', 'default', 'via',
+                                  gateway, 'dev', if_remote_name, run_as_root=True)
 
             # Setup MTU on if_remote_name is required if it is a non
             # default value
@@ -433,11 +440,6 @@ class DockerGenericVIFDriver(object):
                 utils.execute('ip', 'netns', 'exec', container_id, 'ip',
                               'link', 'set', if_remote_name, 'mtu', mtu,
                               run_as_root=True)
-
-            if gateway is not None:
-                utils.execute('ip', 'netns', 'exec', container_id,
-                              'ip', 'route', 'replace', 'default', 'via',
-                              gateway, 'dev', if_remote_name, run_as_root=True)
         except Exception:
             LOG.exception("Failed to attach vif")
 

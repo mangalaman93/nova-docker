@@ -37,22 +37,23 @@ def teardown_network(container_id):
                     container_id)
 
 
-def find_fixed_ip(instance, network_info):
-    for subnet in network_info['subnets']:
+def find_fixed_ip(instance, subnet):
+    try:
         netmask = subnet['cidr'].split('/')[1]
         for ip in subnet['ips']:
             if ip['type'] == 'fixed' and ip['address']:
                 return ip['address'] + "/" + netmask
-    raise exception.InstanceDeployFailure(_('Cannot find fixed ip'),
-                                          instance_id=instance['uuid'])
+    except Exception, e:
+        raise exception.InstanceDeployFailure(_('Cannot find fixed ip'),
+                                              instance_id=instance['uuid'])
 
 
-def find_gateway(instance, network_info):
-    for subnet in network_info['subnets']:
+def find_gateway(instance, subnet):
+    try:
         return subnet['gateway']['address']
-    raise exception.InstanceDeployFailure(_('Cannot find gateway'),
-                                          instance_id=instance['uuid'])
-
+    except Exception, e:
+        raise exception.InstanceDeployFailure(_('Cannot find gateway'),
+                                              instance_id=instance['uuid'])
 
 # NOTE(arosen) - this method should be removed after it's moved into the
 # linux_net code in nova.

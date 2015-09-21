@@ -59,15 +59,15 @@ class NetworkTestCase(test.NoDBTestCase):
         network_info = test_utils.get_test_network_info()
         first_net = network_info[0]['network']
         first_net['subnets'][0]['gateway']['address'] = '10.0.0.1'
-        self.assertEqual('10.0.0.1', network.find_gateway(instance, first_net))
+        self.assertEqual('10.0.0.1', network.find_gateway(instance, first_net['subnets'][0]))
 
     def test_cannot_find_gateway(self):
         instance = {'uuid': uuid.uuid4()}
         network_info = test_utils.get_test_network_info()
         first_net = network_info[0]['network']
-        first_net['subnets'] = []
+        first_net['subnets'] = [{}]
         self.assertRaises(exception.InstanceDeployFailure,
-                          network.find_gateway, instance, first_net)
+                          network.find_gateway, instance, first_net['subnets'][0])
 
     def test_find_fixed_ip(self):
         instance = {'uuid': uuid.uuid4()}
@@ -77,12 +77,12 @@ class NetworkTestCase(test.NoDBTestCase):
         first_net['subnets'][0]['ips'][0]['type'] = 'fixed'
         first_net['subnets'][0]['ips'][0]['address'] = '10.0.1.13'
         self.assertEqual('10.0.1.13/24', network.find_fixed_ip(instance,
-                                                               first_net))
+                                                               first_net['subnets'][0]))
 
     def test_cannot_find_fixed_ip(self):
         instance = {'uuid': uuid.uuid4()}
         network_info = test_utils.get_test_network_info()
         first_net = network_info[0]['network']
-        first_net['subnets'] = []
+        first_net['subnets'] = [{}]
         self.assertRaises(exception.InstanceDeployFailure,
-                          network.find_fixed_ip, instance, first_net)
+                          network.find_fixed_ip, instance, first_net['subnets'][0])
