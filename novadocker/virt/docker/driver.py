@@ -734,7 +734,8 @@ class DockerDriver(driver.ComputeDriver):
         return int(flavor['vcpus']) * 1024
 
     def _create_container(self, instance, image_name, args):
-        name = "nova-" + instance['uuid']
+        LOG.debug("creating container instance: %s", instance)
+        name = instance['display_name'] + "-" + instance['uuid']
         hostname = args.pop('hostname', None)
         cpu_shares = args.pop('cpu_shares', None)
         network_disabled = args.pop('network_disabled', False)
